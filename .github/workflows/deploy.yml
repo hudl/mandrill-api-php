@@ -1,0 +1,40 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'master'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PACKAGE_NAME: wyscout/mandrill
+
+jobs:
+  publish:
+    name: Publish to Satis
+    runs-on:
+      group: wyscout-runners
+    container:
+      image: 662288457061.dkr.ecr.eu-west-1.amazonaws.com/wyjenkinsslave:2.2.1-ubuntu20-php72
+      options: --user root
+      volumes:
+        - /root/.ssh:/root/.ssh:ro
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          clean: true
+
+      - name: Satis update
+        run: |
+          ssh wydev@dev0.in.wyscout.com sudo /home/wydev/bin/satis-single-update ${PACKAGE_NAME}
+
+      - name: Cleanup workspace
+        if: always()
+        run: find . -name . -o -prune -exec rm -rf -- {} +
